@@ -25,56 +25,67 @@ for visual reference.
 
 ## Setup
 
-### 1. Install toolchain
+The dev loop runs in Docker — Metro bundler, the Firebase Local Emulator
+Suite, the seed script, and typecheck all run as containers. Only the
+device-side builds (iOS / Android dev client) run on the host, because
+Xcode and the Android SDK don't belong in a container and native BLE only
+works on a physical device.
+
+### Quick start (Docker)
 
 ```bash
-# Node 20+ and Xcode / Android Studio for native builds
-npm install
+# Fonts — drop the 5 TTFs listed in assets/fonts/README.md into assets/fonts/
+
+# Start Firestore + Auth emulators and Metro
+docker compose up emulator metro
+
+# In another terminal: seed the emulator with catalog + coupons
+docker compose run --rm seed
+
+# Typecheck from a clean container
+docker compose run --rm typecheck
 ```
 
-### 2. Firebase project
+The emulator UI is at **http://localhost:4000** (Firestore inspector,
+request log). Data is persisted to the `emulator-data` Docker volume between
+runs.
 
-Create a Firebase project and enable **Authentication → Anonymous** and
-**Firestore**. Copy the Web SDK config into `.env`:
+### Building the device-side dev client (on the host)
+
+Because the app uses native modules (BLE, secure PIN hashing), you need an
+Expo **dev client** — Expo Go can't load it. Build once per device, then
+day-to-day just run `docker compose up emulator metro` and let the device
+connect to Metro.
+
+```bash
+# One-time, on the host
+npx expo prebuild
+npx eas build --profile development --platform ios     # or android
+```
+
+On Docker Desktop (macOS / Windows), `network_mode: host` doesn't work — open
+`docker-compose.yml` and swap it for the commented-out `ports:` block, then
+use `npx expo start --tunnel` (edit the `metro` command). On Linux the
+default host-networking config lets a phone on the same LAN reach Metro
+directly.
+
+### Going to production
+
+When you're ready to point the app at a real Firebase project instead of the
+emulator:
 
 ```bash
 cp .env.example .env
-# fill in EXPO_PUBLIC_FIREBASE_* values
-```
+# fill in EXPO_PUBLIC_FIREBASE_* from the Firebase console and
+# leave EXPO_PUBLIC_USE_FIREBASE_EMULATOR unset (or =false)
 
-Deploy the rules in `firestore.rules` (edit `OWNER_UID` to your owner
-account's UID first):
-
-```bash
+# Edit OWNER_UID in firestore.rules, then deploy:
 firebase deploy --only firestore:rules
-```
 
-Seed the initial catalog + coupons:
-
-```bash
+# Seed prod (use a short-lived service account)
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+  GCLOUD_PROJECT=your-project-id \
   node scripts/seed-catalog.mjs
-```
-
-### 3. Fonts
-
-Drop the five TTFs listed in `assets/fonts/README.md` into `assets/fonts/`.
-They're all OFL-licensed.
-
-### 4. Run
-
-Because the app uses native modules (BLE, secure PIN hashing), you need an
-Expo **dev client** — it won't run in Expo Go.
-
-```bash
-# First time on each device: build a dev client
-npx expo prebuild
-npx eas build --profile development --platform ios     # or android
-
-# Day-to-day
-npm run start     # Metro bundler
-npm run ios       # local sim with dev client
-npm run android
 ```
 
 ## First launch

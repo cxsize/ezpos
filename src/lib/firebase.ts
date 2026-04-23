@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
 // @ts-expect-error — getReactNativePersistence is a runtime-only export in firebase/auth on RN
-import { initializeAuth, getAuth, getReactNativePersistence, signInAnonymously, type Auth } from 'firebase/auth';
+import { initializeAuth, getAuth, getReactNativePersistence, signInAnonymously, connectAuthEmulator, type Auth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const config = {
@@ -13,13 +13,17 @@ const config = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
+const USE_EMULATOR = process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
+const EMULATOR_HOST = process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST ?? '127.0.0.1';
+
 let _app: FirebaseApp | null = null;
 let _db: Firestore | null = null;
 let _auth: Auth | null = null;
+let _emulatorsWired = false;
 
 export function firebaseApp() {
   if (_app) return _app;
-  if (!config.apiKey || !config.projectId) {
+  if (!config.projectId) {
     throw new Error('Missing Firebase config. Copy .env.example to .env and fill it in.');
   }
   _app = getApps().length ? getApp() : initializeApp(config as Required<typeof config>);
@@ -27,7 +31,10 @@ export function firebaseApp() {
 }
 
 export function db() {
-  return (_db ??= getFirestore(firebaseApp()));
+  if (_db) return _db;
+  _db = getFirestore(firebaseApp());
+  wireEmulators();
+  return _db;
 }
 
 export function auth() {
@@ -40,7 +47,15 @@ export function auth() {
     // Already initialized (e.g. Fast Refresh) — fall through.
     _auth = getAuth(firebaseApp());
   }
+  wireEmulators();
   return _auth!;
+}
+
+function wireEmulators() {
+  if (!USE_EMULATOR || _emulatorsWired) return;
+  if (_db) connectFirestoreEmulator(_db, EMULATOR_HOST, 8080);
+  if (_auth) connectAuthEmulator(_auth, `http://${EMULATOR_HOST}:9099`, { disableWarnings: true });
+  _emulatorsWired = true;
 }
 
 /** Sign the device in anonymously so Firestore rules can require auth. */
