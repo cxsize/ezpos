@@ -10,17 +10,21 @@ type Events = {
 
 type Handler<K extends keyof Events> = (payload: Events[K]) => void;
 
-const subs: { [K in keyof Events]?: Set<Handler<K>> } = {};
+const subs = new Map<keyof Events, Set<Handler<keyof Events>>>();
 
 export const devBus = {
   on<K extends keyof Events>(event: K, handler: Handler<K>): () => void {
-    const set = (subs[event] ??= new Set()) as Set<Handler<K>>;
-    set.add(handler);
-    return () => set.delete(handler);
+    let set = subs.get(event);
+    if (!set) {
+      set = new Set();
+      subs.set(event, set);
+    }
+    set.add(handler as Handler<keyof Events>);
+    return () => set!.delete(handler as Handler<keyof Events>);
   },
   emit<K extends keyof Events>(event: K, payload?: Events[K]) {
-    const set = subs[event] as Set<Handler<K>> | undefined;
+    const set = subs.get(event);
     if (!set) return;
-    for (const h of set) h(payload as Events[K]);
+    for (const h of set) (h as Handler<K>)(payload as Events[K]);
   },
 };
