@@ -18,9 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Dependencies install is a separate layer so source edits don't bust the cache.
+# --legacy-peer-deps is standard for Expo: its peer-dep graph (react-native,
+# reanimated, react-dom) trips strict resolution otherwise.
 COPY package.json package-lock.json* ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm install --no-audit --no-fund
+    npm install --legacy-peer-deps --no-audit --no-fund
 
 # App source is bind-mounted at runtime via docker-compose; no COPY here.
 

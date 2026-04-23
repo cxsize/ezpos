@@ -7,7 +7,9 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { useFonts as useGeist, Geist_400Regular, Geist_500Medium } from '@expo-google-fonts/geist';
+// We alias Inter as "Geist" — they're both humanist geometric sans, and
+// keeping the Geist name means nothing else in the codebase has to change.
+import { useFonts, Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import { BodoniModa_400Regular } from '@expo-google-fonts/bodoni-moda';
 import { NotoSansThai_400Regular } from '@expo-google-fonts/noto-sans-thai';
 import { NotoSerifThai_400Regular } from '@expo-google-fonts/noto-serif-thai';
@@ -24,9 +26,9 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 const MOCK = process.env.EXPO_PUBLIC_MOCK_HARDWARE === 'true';
 
 export default function RootLayout() {
-  const [fontsLoaded] = useGeist({
-    Geist: Geist_400Regular,
-    'Geist-Medium': Geist_500Medium,
+  const [fontsLoaded] = useFonts({
+    Geist: Inter_400Regular,
+    'Geist-Medium': Inter_500Medium,
     BodoniModa: BodoniModa_400Regular,
     NotoSansThai: NotoSansThai_400Regular,
     NotoSerifThai: NotoSerifThai_400Regular,
