@@ -23,51 +23,61 @@ for visual reference.
   one surface at a time. Phase 2 is a second tablet running a
   "customer view" flavor of the app.
 
-## Setup
+## Run it locally in one command
 
-The dev loop runs in Docker — Metro bundler, the Firebase Local Emulator
-Suite, the seed script, and typecheck all run as containers. Only the
-device-side builds (iOS / Android dev client) run on the host, because
-Xcode and the Android SDK don't belong in a container and native BLE only
-works on a physical device.
-
-### Quick start (Docker)
+The whole stack — Firebase emulators, catalog seed, the app itself — runs
+in Docker with hardware mocked. No Firebase account, no tablet, no printer,
+no fonts to download.
 
 ```bash
-# Fonts — drop the 5 TTFs listed in assets/fonts/README.md into assets/fonts/
-
-# Start Firestore + Auth emulators and Metro
-docker compose up emulator metro
-
-# In another terminal: seed the emulator with catalog + coupons
-docker compose run --rm seed
-
-# Typecheck from a clean container
-docker compose run --rm typecheck
+docker compose up
 ```
 
-The emulator UI is at **http://localhost:4000** (Firestore inspector,
-request log). Data is persisted to the `emulator-data` Docker volume between
-runs.
+Then open **http://localhost:8081** in a browser. The app auto-signs in as
+"Dev Cashier" and loads the seeded catalog.
 
-### Building the device-side dev client (on the host)
+What's mocked:
 
-Because the app uses native modules (BLE, secure PIN hashing), you need an
-Expo **dev client** — Expo Go can't load it. Build once per device, then
-day-to-day just run `docker compose up emulator metro` and let the device
-connect to Metro.
+- **Barcode scanner** — the DevPanel (bottom-left "DEV" pill) has buttons to
+  inject product SKUs and coupon barcodes, hitting the same handler a real
+  BLE HID scanner would.
+- **Thermal printer** — a fake ESC/POS adapter renders the receipt as text
+  and surfaces it in DevPanel → **Print**. "Fail next print" button lets
+  you exercise the error path.
+- **Cash drawer** — counts kicks in the DevPanel. No-op otherwise.
+- **Firebase** — local Auth + Firestore emulators; UI at
+  **http://localhost:4000**.
+
+Other common commands:
 
 ```bash
-# One-time, on the host
+docker compose run --rm seed                    # reseed the emulator
+docker compose run --rm typecheck               # tsc --noEmit
+docker compose --profile device up \
+  emulator seed metro                           # for a real device + Metro
+docker compose down                             # stop
+docker compose down -v                          # stop + wipe emulator data
+```
+
+### Using it on a real tablet
+
+Because native BLE doesn't work in a browser, you still need a custom Expo
+**dev client** on the device. Build once on the host:
+
+```bash
 npx expo prebuild
 npx eas build --profile development --platform ios     # or android
 ```
 
-On Docker Desktop (macOS / Windows), `network_mode: host` doesn't work — open
-`docker-compose.yml` and swap it for the commented-out `ports:` block, then
-use `npx expo start --tunnel` (edit the `metro` command). On Linux the
-default host-networking config lets a phone on the same LAN reach Metro
-directly.
+Then day-to-day:
+
+```bash
+docker compose --profile device up emulator seed metro
+```
+
+Open the dev client on the tablet and it'll auto-connect to Metro. On
+Docker Desktop (macOS / Windows), `network_mode: host` doesn't work — swap
+the `metro` service to use published ports and start Expo with `--tunnel`.
 
 ### Going to production
 
@@ -90,7 +100,12 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
 
 ## First launch
 
-1. The tablet signs in anonymously to Firestore.
+In **mock mode** (default via `docker compose up`), the app auto-creates a
+"Dev Cashier" with PIN `0000` and skips past the sign-in screen.
+
+In **production mode** (real Firebase, real hardware):
+
+1. Tablet signs in anonymously to Firestore.
 2. No cashier exists → routes to **/enroll** to create the first one.
 3. From then on, **/signin** shows a PIN pad.
 4. On the sale screen, tap the **gear** (bottom-right) → **Printer** to scan

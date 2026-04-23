@@ -1,12 +1,40 @@
-# Local dev stack for Cakethakae POS.
+# Local dev stack for Cakethakae POS — zero hardware, zero cloud.
 #
-#   docker compose up emulator metro     # dev loop: emulator + Metro bundler
-#   docker compose run --rm seed         # one-shot: seed catalog + coupons
-#   docker compose run --rm typecheck    # tsc --noEmit
+#   docker compose up                       # full loop: emulator + seed + web
+#   docker compose up web                   # browser-only (Expo Web + emulator)
+#   docker compose up metro                 # physical device / simulator dev
+#   docker compose run --rm seed            # reseed catalog + coupons
+#   docker compose run --rm typecheck       # tsc --noEmit
 #
-# iOS / Android builds ("npx eas build") run on the host — Xcode and the
-# Android SDK can't meaningfully live inside Docker for a dev loop. On a
-# physical device, connect to the Metro bundler at <host-ip>:8081.
+# The app runs in a browser at http://localhost:8081 with the hardware
+# (printer, scanner, cash drawer) mocked by DevPanel. Fonts are pulled from
+# @expo-google-fonts at bundle time, so no manual TTF setup.
+#
+# The only thing not in Docker is the device-side dev client build — Xcode
+# can't run in a container. Run `npx expo prebuild && npx eas build` on the
+# host when you're ready to install on a real tablet.
+
+x-node-service: &node-service
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+  image: cakethakae-pos-node:dev
+  working_dir: /app
+  volumes:
+    - .:/app
+    - node_modules:/app/node_modules
+
+x-app-env: &app-env
+  EXPO_NO_TELEMETRY: "1"
+  REACT_NATIVE_PACKAGER_HOSTNAME: ${HOST_IP:-0.0.0.0}
+  EXPO_PUBLIC_USE_FIREBASE_EMULATOR: "true"
+  EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: ${HOST_IP:-127.0.0.1}
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID: demo-cakethakae
+  EXPO_PUBLIC_FIREBASE_API_KEY: demo-api-key
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: demo-cakethakae.firebaseapp.com
+  EXPO_PUBLIC_FIREBASE_APP_ID: demo-app-id
+  EXPO_PUBLIC_MOCK_HARDWARE: "true"
+  EXPO_PUBLIC_REGISTER_ID: "01"
 
 services:
   emulator:
@@ -31,72 +59,45 @@ services:
       timeout: 3s
       retries: 20
 
-  metro:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-    image: cakethakae-pos-node:dev
-    working_dir: /app
-    # Host networking gives physical devices on the same LAN a path to Metro
-    # without port-forwarding fuss. Works on Linux; on Docker Desktop (macOS /
-    # Windows) comment this out and use the published ports + --tunnel mode.
-    network_mode: host
-    # When host-networking is disabled, swap the block above for:
-    # ports:
-    #   - "8081:8081"
-    #   - "19000:19000"
-    #   - "19001:19001"
-    #   - "19002:19002"
-    #   - "19006:19006"
-    environment:
-      EXPO_NO_TELEMETRY: "1"
-      REACT_NATIVE_PACKAGER_HOSTNAME: ${HOST_IP:-0.0.0.0}
-      # Point the app at the local emulators. The `emulator` service above
-      # exposes these on the host; because we share the host network, localhost
-      # resolves to both.
-      EXPO_PUBLIC_USE_FIREBASE_EMULATOR: "true"
-      EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: ${HOST_IP:-127.0.0.1}
-      EXPO_PUBLIC_FIREBASE_PROJECT_ID: demo-cakethakae
-      EXPO_PUBLIC_FIREBASE_API_KEY: demo-api-key
-      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: demo-cakethakae.firebaseapp.com
-      EXPO_PUBLIC_FIREBASE_APP_ID: demo-app-id
-      EXPO_PUBLIC_REGISTER_ID: "01"
-    volumes:
-      - .:/app
-      - node_modules:/app/node_modules
-    depends_on:
-      emulator:
-        condition: service_healthy
-    command: ["npx", "expo", "start", "--dev-client", "--lan"]
-
   seed:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-    image: cakethakae-pos-node:dev
-    working_dir: /app
+    <<: *node-service
     network_mode: host
     environment:
       FIRESTORE_EMULATOR_HOST: ${HOST_IP:-127.0.0.1}:8080
       FIREBASE_AUTH_EMULATOR_HOST: ${HOST_IP:-127.0.0.1}:9099
       GCLOUD_PROJECT: demo-cakethakae
-    volumes:
-      - .:/app
-      - node_modules:/app/node_modules
     depends_on:
       emulator:
         condition: service_healthy
+    # Idempotent: safe to run on every `up` via the `web` / `metro` dependency.
     command: ["node", "scripts/seed-catalog.mjs"]
 
+  web:
+    <<: *node-service
+    ports:
+      - "8081:8081"   # Metro + web dev server
+      - "19006:19006" # Expo Web (legacy webpack dev server — harmless)
+    environment:
+      <<: *app-env
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    command: ["npx", "expo", "start", "--web", "--port", "8081"]
+
+  metro:
+    <<: *node-service
+    profiles: ["device"]
+    network_mode: host
+    environment:
+      <<: *app-env
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    command: ["npx", "expo", "start", "--dev-client", "--lan"]
+
   typecheck:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-    image: cakethakae-pos-node:dev
-    working_dir: /app
-    volumes:
-      - .:/app
-      - node_modules:/app/node_modules
+    <<: *node-service
+    profiles: ["tools"]
     command: ["npx", "tsc", "--noEmit"]
 
 volumes:

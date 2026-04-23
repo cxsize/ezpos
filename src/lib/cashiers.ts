@@ -3,6 +3,9 @@ import { db } from './firebase';
 import { hashPin, verifyPin } from './pin';
 import type { Cashier } from '~/types';
 
+export const DEV_CASHIER_ID = 'dev-cashier';
+export const DEV_CASHIER_PIN = '0000';
+
 export async function listCashiers(): Promise<Cashier[]> {
   const snap = await getDocs(collection(db(), 'cashiers'));
   const items: Cashier[] = [];
@@ -28,6 +31,26 @@ export async function createCashier(name: string, pin: string): Promise<Cashier>
   const pinHash = await hashPin(pin);
   const cashier: Cashier = { id, name: trimmed, pinHash, active: true, createdAt: Date.now() };
   await setDoc(doc(db(), 'cashiers', id), cashier);
+  return cashier;
+}
+
+/**
+ * In mock-hardware mode, make sure a well-known cashier exists so the PIN
+ * screen can be blown past during dev. PIN is DEV_CASHIER_PIN ("0000").
+ */
+export async function ensureDevCashier(): Promise<Cashier> {
+  const ref = doc(db(), 'cashiers', DEV_CASHIER_ID);
+  const snap = await getDoc(ref);
+  if (snap.exists()) return { id: snap.id, ...(snap.data() as Omit<Cashier, 'id'>) };
+  const pinHash = await hashPin(DEV_CASHIER_PIN);
+  const cashier: Cashier = {
+    id: DEV_CASHIER_ID,
+    name: 'Dev Cashier',
+    pinHash,
+    active: true,
+    createdAt: Date.now(),
+  };
+  await setDoc(ref, cashier);
   return cashier;
 }
 
