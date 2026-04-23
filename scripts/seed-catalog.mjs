@@ -1,23 +1,35 @@
-// One-shot seed for products + coupons. Run once after creating your Firebase
-// project and filling in .env. Uses firebase-admin with a service-account JSON.
+// One-shot seed for products + coupons.
 //
+// Against the local emulator (via docker compose):
+//   docker compose run --rm seed
+//
+// Against a real Firebase project:
 //   GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
-//   node scripts/seed-catalog.mjs
+//     GCLOUD_PROJECT=your-project-id \
+//     node scripts/seed-catalog.mjs
 //
-// The service account must have Firestore write access. Delete or rotate it
-// when you're done; don't commit it.
+// When FIRESTORE_EMULATOR_HOST is set, firebase-admin connects to the emulator
+// and the service-account credential is ignored.
 
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { readFileSync } from 'node:fs';
 
-const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-if (!credentialsPath) {
-  console.error('Set GOOGLE_APPLICATION_CREDENTIALS to the service-account JSON path.');
-  process.exit(1);
+const useEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+
+if (useEmulator) {
+  const projectId = process.env.GCLOUD_PROJECT ?? 'demo-cakethakae';
+  initializeApp({ projectId });
+  console.log(`→ Emulator mode (${process.env.FIRESTORE_EMULATOR_HOST}, project ${projectId})`);
+} else {
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (credentialsPath) {
+    initializeApp({ credential: cert(JSON.parse(readFileSync(credentialsPath, 'utf8'))) });
+  } else {
+    initializeApp({ credential: applicationDefault() });
+  }
 }
 
-initializeApp({ credential: cert(JSON.parse(readFileSync(credentialsPath, 'utf8'))) });
 const db = getFirestore();
 
 const PRODUCTS = [

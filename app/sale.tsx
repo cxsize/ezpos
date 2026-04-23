@@ -6,6 +6,7 @@ import { SaleScreen } from '~/components/SaleScreen';
 import { PayScreen } from '~/components/PayScreen';
 import { DiscountModal } from '~/components/DiscountModal';
 import { ScanCapture } from '~/components/ScanCapture';
+import { DevPanel } from '~/components/DevPanel';
 import { Icon } from '~/components/Icon';
 import { useSale } from '~/state/sale';
 import { useSession } from '~/state/session';
@@ -27,6 +28,7 @@ export default function Sale() {
       </View>
       <DiscountModal />
       <ScanCapture />
+      <DevPanel />
 
       <Pressable
         onPress={() => router.push('/settings')}

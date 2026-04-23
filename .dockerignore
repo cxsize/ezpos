@@ -1,0 +1,15 @@
+node_modules
+.expo
+.expo-shared
+dist
+web-build
+ios
+android
+.git
+.gitignore
+.env
+.env.local
+*.log
+.DS_Store
+prototype
+emulator-data

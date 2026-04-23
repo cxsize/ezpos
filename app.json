@@ -22,6 +22,11 @@
         "NSBluetoothPeripheralUsageDescription": "Connects to the receipt printer and barcode scanner."
       }
     },
+    "platforms": ["ios", "android", "web"],
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/logo.jpg"
+    },
     "android": {
       "package": "com.cakethakae.pos",
       "adaptiveIcon": {

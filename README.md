@@ -23,63 +23,89 @@ for visual reference.
   one surface at a time. Phase 2 is a second tablet running a
   "customer view" flavor of the app.
 
-## Setup
+## Run it locally in one command
 
-### 1. Install toolchain
+The whole stack — Firebase emulators, catalog seed, the app itself — runs
+in Docker with hardware mocked. No Firebase account, no tablet, no printer,
+no fonts to download.
 
 ```bash
-# Node 20+ and Xcode / Android Studio for native builds
-npm install
+docker compose up
 ```
 
-### 2. Firebase project
+Then open **http://localhost:8081** in a browser. The app auto-signs in as
+"Dev Cashier" and loads the seeded catalog.
 
-Create a Firebase project and enable **Authentication → Anonymous** and
-**Firestore**. Copy the Web SDK config into `.env`:
+What's mocked:
+
+- **Barcode scanner** — the DevPanel (bottom-left "DEV" pill) has buttons to
+  inject product SKUs and coupon barcodes, hitting the same handler a real
+  BLE HID scanner would.
+- **Thermal printer** — a fake ESC/POS adapter renders the receipt as text
+  and surfaces it in DevPanel → **Print**. "Fail next print" button lets
+  you exercise the error path.
+- **Cash drawer** — counts kicks in the DevPanel. No-op otherwise.
+- **Firebase** — local Auth + Firestore emulators; UI at
+  **http://localhost:4000**.
+
+Other common commands:
+
+```bash
+docker compose run --rm seed                    # reseed the emulator
+docker compose run --rm typecheck               # tsc --noEmit
+docker compose --profile device up \
+  emulator seed metro                           # for a real device + Metro
+docker compose down                             # stop
+docker compose down -v                          # stop + wipe emulator data
+```
+
+### Using it on a real tablet
+
+Because native BLE doesn't work in a browser, you still need a custom Expo
+**dev client** on the device. Build once on the host:
+
+```bash
+npx expo prebuild
+npx eas build --profile development --platform ios     # or android
+```
+
+Then day-to-day:
+
+```bash
+docker compose --profile device up emulator seed metro
+```
+
+Open the dev client on the tablet and it'll auto-connect to Metro. On
+Docker Desktop (macOS / Windows), `network_mode: host` doesn't work — swap
+the `metro` service to use published ports and start Expo with `--tunnel`.
+
+### Going to production
+
+When you're ready to point the app at a real Firebase project instead of the
+emulator:
 
 ```bash
 cp .env.example .env
-# fill in EXPO_PUBLIC_FIREBASE_* values
-```
+# fill in EXPO_PUBLIC_FIREBASE_* from the Firebase console and
+# leave EXPO_PUBLIC_USE_FIREBASE_EMULATOR unset (or =false)
 
-Deploy the rules in `firestore.rules` (edit `OWNER_UID` to your owner
-account's UID first):
-
-```bash
+# Edit OWNER_UID in firestore.rules, then deploy:
 firebase deploy --only firestore:rules
-```
 
-Seed the initial catalog + coupons:
-
-```bash
+# Seed prod (use a short-lived service account)
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+  GCLOUD_PROJECT=your-project-id \
   node scripts/seed-catalog.mjs
-```
-
-### 3. Fonts
-
-Drop the five TTFs listed in `assets/fonts/README.md` into `assets/fonts/`.
-They're all OFL-licensed.
-
-### 4. Run
-
-Because the app uses native modules (BLE, secure PIN hashing), you need an
-Expo **dev client** — it won't run in Expo Go.
-
-```bash
-# First time on each device: build a dev client
-npx expo prebuild
-npx eas build --profile development --platform ios     # or android
-
-# Day-to-day
-npm run start     # Metro bundler
-npm run ios       # local sim with dev client
-npm run android
 ```
 
 ## First launch
 
-1. The tablet signs in anonymously to Firestore.
+In **mock mode** (default via `docker compose up`), the app auto-creates a
+"Dev Cashier" with PIN `0000` and skips past the sign-in screen.
+
+In **production mode** (real Firebase, real hardware):
+
+1. Tablet signs in anonymously to Firestore.
 2. No cashier exists → routes to **/enroll** to create the first one.
 3. From then on, **/signin** shows a PIN pad.
 4. On the sale screen, tap the **gear** (bottom-right) → **Printer** to scan
