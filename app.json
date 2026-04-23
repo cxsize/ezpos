@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Cakethakae POS",
+    "slug": "cakethakae-pos",
+    "scheme": "cakethakaepos",
+    "version": "0.1.0",
+    "orientation": "landscape",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fbfaf7"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "requireFullScreen": true,
+      "bundleIdentifier": "com.cakethakae.pos",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Connects to the receipt printer and barcode scanner.",
+        "NSBluetoothPeripheralUsageDescription": "Connects to the receipt printer and barcode scanner."
+      }
+    },
+    "android": {
+      "package": "com.cakethakae.pos",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#fbfaf7"
+      },
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-screen-orientation",
+        { "initialOrientation": "LANDSCAPE" }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": ["peripheral", "central"],
+          "bluetoothAlwaysPermission": "Connects to the receipt printer and barcode scanner."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

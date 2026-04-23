@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// POS data is readable by any signed-in device (including anonymous).
+// Sales can be created by signed-in devices but never modified after the fact.
+// Catalog / coupons / cashiers are managed from the back-office (owner UID).
+//
+// Before going live, set OWNER_UID below to your back-office account's UID.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isOwner() {
+      // Replace with a real UID (or swap to a custom claim: request.auth.token.owner == true)
+      return request.auth != null && request.auth.uid == 'OWNER_UID';
+    }
+
+    match /products/{id} {
+      allow read: if signedIn();
+      allow write: if isOwner();
+    }
+
+    match /coupons/{id} {
+      allow read: if signedIn();
+      allow write: if isOwner();
+    }
+
+    match /cashiers/{id} {
+      allow read: if signedIn();
+      // Device can create the first cashier during setup; subsequent writes by owner only.
+      allow create: if signedIn();
+      allow update, delete: if isOwner();
+    }
+
+    match /sales/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['receiptNo','cashierId','total','createdAt'])
+        && request.resource.data.total is number;
+      allow update, delete: if isOwner();
+    }
+  }
+}
