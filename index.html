@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="th" data-lang="th">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cakethakae POS</title>
+  <link rel="icon" href="assets/logo.jpg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Noto+Sans+Thai:wght@300;400;500;600&family=Noto+Serif+Thai:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/sale.css"/>
+  <link rel="stylesheet" href="src/pay.css"/>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <script src="src/data.js"></script>
+  <script src="src/i18n.js"></script>
+  <script type="text/babel" src="src/lib.jsx"></script>
+  <script type="text/babel" src="src/sale.jsx"></script>
+  <script type="text/babel" src="src/pay.jsx"></script>
+  <script type="text/babel" src="src/modals.jsx"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="env,react">
+    const DEFAULTS = {
+      accent: 'burgundy',
+      showCustomerDisplay: true,
+      lang: 'th',
+    };
+    const STORAGE_KEY = 'cakethakae-pos-settings';
+
+    const ACCENTS = {
+      burgundy: { primary: '#8b1e3f', primaryD: '#6e1632', primaryL: '#f4c9d7', primaryLL: '#fbe9f0' },
+      forest:   { primary: '#2f5d4a', primaryD: '#23483a', primaryL: '#cae3d5', primaryLL: '#eaf3ee' },
+      cocoa:    { primary: '#6b3a1f', primaryD: '#4e2a15', primaryL: '#e8cdb6', primaryLL: '#f4e4d3' },
+      ink:      { primary: '#1f1a17', primaryD: '#000',   primaryL: '#d6ccc2', primaryLL: '#ece6df' },
+    };
+
+    function applyTweaks(t) {
+      const a = ACCENTS[t.accent] || ACCENTS.burgundy;
+      const root = document.documentElement;
+      root.style.setProperty('--primary', a.primary);
+      root.style.setProperty('--primary-d', a.primaryD);
+      root.style.setProperty('--primary-l', a.primaryL);
+      root.style.setProperty('--primary-ll', a.primaryLL);
+    }
+
+    function loadTweaks() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return DEFAULTS;
+        return { ...DEFAULTS, ...JSON.parse(raw) };
+      } catch { return DEFAULTS; }
+    }
+
+    function App() {
+      const [tweaks, setTweaks] = useState(loadTweaks);
+      const [tweaksOpen, setTweaksOpen] = useState(false);
+
+      useEffect(() => applyTweaks(tweaks), [tweaks]);
+      useEffect(() => {
+        document.documentElement.lang = tweaks.lang || 'th';
+        document.documentElement.setAttribute('data-lang', tweaks.lang || 'th');
+      }, [tweaks.lang]);
+      useEffect(() => {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tweaks)); } catch {}
+      }, [tweaks]);
+
+      const lang = tweaks.lang || 'th';
+      const tStrings = STRINGS[lang] || STRINGS.th;
+      const setLang = (l) => updateTweak('lang', l);
+      const updateTweak = (k, v) => setTweaks(prev => ({ ...prev, [k]: v }));
+
+      const [cart, setCart] = useState([]);
+      const [query, setQuery] = useState('');
+      const [catFilter, setCat] = useState('all');
+      const [flash, setFlash] = useState(null);
+      const [discount, setDiscount] = useState({ type: 'none', value: 0 });
+      const [discOpen, setDiscOpen] = useState(false);
+      const [view, setView] = useState('sale');
+      const [payStep, setPayStep] = useState('method');
+      const [payMethod, setPayMethod] = useState(null);
+      const [cashTendered, setCashTendered] = useState('');
+
+      const addItem = (p) => {
+        setCart(curr => {
+          const i = curr.findIndex(x => x.id === p.id);
+          if (i >= 0) { const next = [...curr]; next[i] = { ...next[i], qty: next[i].qty + 1 }; return next; }
+          return [...curr, { ...p, qty: 1 }];
+        });
+        setFlash(p.id);
+        setTimeout(() => setFlash(f => f === p.id ? null : f), 500);
+      };
+      const incItem = (id) => setCart(c => c.map(x => x.id === id ? {...x, qty: x.qty+1} : x));
+      const decItem = (id) => setCart(c => {
+        const item = c.find(x => x.id === id);
+        if (item && item.qty === 1) return c.filter(x => x.id !== id);
+        return c.map(x => x.id === id ? {...x, qty: x.qty-1} : x);
+      });
+      const removeItem = (id) => setCart(c => c.filter(x => x.id !== id));
+      const clearCart = () => { setCart([]); setDiscount({type:'none', value:0}); };
+
+      const simulateScan = () => {
+        const pool = CATALOG.filter(p => !cart.find(c => c.id === p.id));
+        const p = (pool.length ? pool : CATALOG)[Math.floor(Math.random() * (pool.length || CATALOG.length))];
+        addItem(p);
+      };
+
+      const goPay = () => { setView('pay'); setPayStep('method'); };
+      const backToSale = () => { setView('sale'); setPayStep('method'); };
+      const pickMethod = (m) => {
+        setPayMethod(m);
+        if (m === 'cash') { setCashTendered(''); setPayStep('cash'); }
+        else { setPayStep('qr'); }
+      };
+      const confirmCash = () => setPayStep('drawer');
+      const completeSale = (m) => { setPayMethod(m); setPayStep('done'); };
+      const newSale = () => {
+        setCart([]); setQuery(''); setCat('all'); setDiscount({type:'none',value:0});
+        setCashTendered(''); setPayMethod(null); setPayStep('method'); setView('sale');
+      };
+
+      const state = { cart, query, catFilter, flash, discount, payStep, payMethod, cashTendered };
+      const actions = {
+        setQuery, setCat, addItem, incItem, decItem, removeItem, clearCart,
+        setDiscount, goPay, simulateScan,
+        openDiscount: () => setDiscOpen(true),
+        backToSale, pickMethod, setCashTendered, confirmCash, completeSale, newSale,
+      };
+
+      return (
+        <I18nContext.Provider value={{ lang, t: tStrings, setLang }}>
+        <div className="stage">
+          <div className="tablet" data-screen-label="01 Cashier Tablet">
+            <div className="tablet-screen">
+              <div className="app">
+                <TopBar lang={lang} setLang={setLang}/>
+                {view === 'sale'
+                  ? <SaleScreen state={state} actions={actions}/>
+                  : <PayScreen state={state} actions={actions}/>}
+                <DiscountModal
+                  open={discOpen}
+                  onClose={() => setDiscOpen(false)}
+                  onApply={setDiscount}
+                  current={discount}
+                />
+              </div>
+            </div>
+          </div>
+
+          {tweaks.showCustomerDisplay && (
+            <div className="customer-stand" data-screen-label="02 Customer Display">
+              <div className="customer-stand-screen">
+                <CustomerDisplay state={state}/>
+              </div>
+            </div>
+          )}
+
+          <button className="tweaks-fab" onClick={() => setTweaksOpen(o => !o)} title={tStrings.tweaksTitle}>
+            <Icon name="settings" size={20}/>
+          </button>
+          {tweaksOpen && (
+            <div className="tweaks-panel">
+              <div className="tweaks-title">{tStrings.tweaksTitle}</div>
+              <div className="tweak-row">
+                <div className="tweak-label">{tStrings.language}</div>
+                <div className="tweak-toggle">
+                  <button className={cn('tweak-opt', lang === 'th' && 'tweak-opt-on')} onClick={() => setLang('th')}>ไทย</button>
+                  <button className={cn('tweak-opt', lang === 'en' && 'tweak-opt-on')} onClick={() => setLang('en')}>EN</button>
+                </div>
+              </div>
+              <div className="tweak-row">
+                <div className="tweak-label">{tStrings.accentColor}</div>
+                <div className="tweak-swatches">
+                  {Object.entries(ACCENTS).map(([k, v]) => (
+                    <button key={k}
+                      className={cn('swatch', tweaks.accent === k && 'swatch-on')}
+                      style={{ background: v.primary }}
+                      onClick={() => updateTweak('accent', k)}
+                      aria-label={k}/>
+                  ))}
+                </div>
+              </div>
+              <div className="tweak-row">
+                <div className="tweak-label">{tStrings.customerDisplay}</div>
+                <div className="tweak-toggle">
+                  <button className={cn('tweak-opt', tweaks.showCustomerDisplay && 'tweak-opt-on')} onClick={() => updateTweak('showCustomerDisplay', true)}>{tStrings.show}</button>
+                  <button className={cn('tweak-opt', !tweaks.showCustomerDisplay && 'tweak-opt-on')} onClick={() => updateTweak('showCustomerDisplay', false)}>{tStrings.hide}</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        </I18nContext.Provider>
+      );
+    }
+
+    function TopBar({ lang, setLang }) {
+      const t = STRINGS[lang] || STRINGS.th;
+      const [time, setTime] = useState(new Date());
+      useEffect(() => { const tm = setInterval(() => setTime(new Date()), 30000); return () => clearInterval(tm); }, []);
+      return (
+        <div className="topbar">
+          <div className="brand">
+            <img src="assets/logo.jpg" alt=""/>
+            <span className="brand-name">cakethakae</span>
+            <span className="brand-sep">·</span>
+            <span className="brand-reg">{t.brandRegister}</span>
+          </div>
+          <div className="topbar-spacer"/>
+          <div className="tb-status">
+            <div className="lang-toggle">
+              <button className={cn('lang-btn', lang === 'th' && 'lang-btn-on')} onClick={() => setLang('th')}>ไทย</button>
+              <button className={cn('lang-btn', lang === 'en' && 'lang-btn-on')} onClick={() => setLang('en')}>EN</button>
+            </div>
+            <span className="tb-pill"><span className="dot"/> {t.online}</span>
+            <span>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="tb-user"><span className="tb-avatar">P</span> Ploy N.</span>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
