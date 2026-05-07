@@ -3,11 +3,13 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { useT } from '~/i18n/useT';
 import { useSettings } from '~/state/settings';
 import { useSession } from '~/state/session';
+import { useCatalog } from '~/state/catalog';
 
 export function TopBar() {
   const { t, lang } = useT();
   const setLang = useSettings((s) => s.setLang);
   const cashier = useSession((s) => s.cashier);
+  const online = useCatalog((s) => s.online);
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -37,8 +39,10 @@ export function TopBar() {
         </View>
 
         <View className="flex-row items-center gap-[7px]">
-          <View className="w-[5px] h-[5px] rounded-full bg-forest" />
-          <Text className="text-ink-2 text-[11.5px] uppercase tracking-[0.1em]">{t.online}</Text>
+          <View className={`w-[5px] h-[5px] rounded-full ${online ? 'bg-forest' : 'bg-rose-400'}`} />
+          <Text className="text-ink-2 text-[11.5px] uppercase tracking-[0.1em]">
+            {online ? t.online : t.offline}
+          </Text>
         </View>
 
         <Text className="text-ink-3 text-[12px]">

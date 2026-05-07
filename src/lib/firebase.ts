@@ -1,5 +1,12 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  connectFirestoreEmulator,
+  type Firestore,
+} from 'firebase/firestore';
+import { Platform } from 'react-native';
 // @ts-expect-error — getReactNativePersistence is a runtime-only export in firebase/auth on RN
 import { initializeAuth, getAuth, getReactNativePersistence, signInAnonymously, connectAuthEmulator, type Auth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,7 +39,14 @@ export function firebaseApp() {
 
 export function db() {
   if (_db) return _db;
-  _db = getFirestore(firebaseApp());
+  const app = firebaseApp();
+  // On web, enable IndexedDB persistence so catalog reads and sale writes
+  // survive a network drop. On native the JS SDK has no IndexedDB; we rely
+  // on manual AsyncStorage caching instead.
+  _db =
+    Platform.OS === 'web'
+      ? initializeFirestore(app, { localCache: persistentLocalCache() })
+      : getFirestore(app);
   wireEmulators();
   return _db;
 }

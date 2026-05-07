@@ -15,7 +15,8 @@ import { NotoSansThai_400Regular } from '@expo-google-fonts/noto-sans-thai';
 import { NotoSerifThai_400Regular } from '@expo-google-fonts/noto-serif-thai';
 
 import { ensureSignedIn } from '~/lib/firebase';
-import { subscribeProducts, subscribeCoupons } from '~/lib/catalog';
+import { subscribeProducts, subscribeCoupons, loadCachedCatalog } from '~/lib/catalog';
+import { flushSaleQueue } from '~/lib/sales';
 import { ensureDevCashier, authenticate, DEV_CASHIER_ID, DEV_CASHIER_PIN } from '~/lib/cashiers';
 import { useCatalog } from '~/state/catalog';
 import { useSession } from '~/state/session';
@@ -37,6 +38,7 @@ export default function RootLayout() {
   const setProducts = useCatalog((s) => s.setProducts);
   const setCoupons = useCatalog((s) => s.setCoupons);
   const setLoaded = useCatalog((s) => s.setLoaded);
+  const setOnline = useCatalog((s) => s.setOnline);
   const sessionSignIn = useSession((s) => s.signIn);
 
   useEffect(() => {
@@ -48,13 +50,34 @@ export default function RootLayout() {
   useEffect(() => {
     let offP: (() => void) | undefined;
     let offC: (() => void) | undefined;
+    let wasOffline = false;
+
     (async () => {
       try {
-        await ensureSignedIn();
-        offP = subscribeProducts((p) => {
-          setProducts(p);
+        // Show cached catalog immediately — no network wait on startup.
+        const cached = await loadCachedCatalog();
+        if (cached) {
+          setProducts(cached.products);
+          setCoupons(cached.coupons);
           setLoaded(true);
-        });
+        }
+
+        await ensureSignedIn();
+
+        offP = subscribeProducts(
+          (p) => {
+            setProducts(p);
+            setLoaded(true);
+          },
+          (fromCache) => {
+            setOnline(!fromCache);
+            // Flush any sales that were saved while offline.
+            if (wasOffline && !fromCache) {
+              flushSaleQueue().catch(() => {});
+            }
+            wasOffline = fromCache;
+          },
+        );
         offC = subscribeCoupons(setCoupons);
 
         if (MOCK) {
@@ -72,7 +95,7 @@ export default function RootLayout() {
       offP?.();
       offC?.();
     };
-  }, [setProducts, setCoupons, setLoaded, sessionSignIn]);
+  }, [setProducts, setCoupons, setLoaded, setOnline, sessionSignIn]);
 
   useEffect(() => {
     if (fontsLoaded && bootstrapped) SplashScreen.hideAsync().catch(() => {});

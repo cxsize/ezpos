@@ -4,6 +4,7 @@ export type Lang = 'th' | 'en';
 type S = {
   brandRegister: string;
   online: string;
+  offline: string;
   searchPlaceholder: string;
   scan: string;
   quickPicks: string;
@@ -120,6 +121,7 @@ export const STRINGS: Record<Lang, S> = {
   en: {
     brandRegister: 'Register 01',
     online: 'Online',
+    offline: 'Offline',
     searchPlaceholder: 'Scan barcode or search…',
     scan: 'Scan',
     quickPicks: 'Quick picks',
@@ -232,6 +234,7 @@ export const STRINGS: Record<Lang, S> = {
   th: {
     brandRegister: 'เครื่อง 01',
     online: 'ออนไลน์',
+    offline: 'ออฟไลน์',
     searchPlaceholder: 'สแกนบาร์โค้ด หรือค้นหา…',
     scan: 'สแกน',
     quickPicks: 'เมนูยอดนิยม',
