@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Icon } from './Icon';
 import { ProductThumb } from './ProductThumb';
+import { ParkedModal } from './ParkedModal';
 import { useT } from '~/i18n/useT';
 import { useSale, totals } from '~/state/sale';
 import { useCatalog, QUICK_PICK_CODES } from '~/state/catalog';
+import { useSession } from '~/state/session';
+import { useParked } from '~/state/parked';
 import { filterProducts } from '~/lib/search';
 import { fmtTHB, fmtTHB2 } from '~/lib/money';
 import { setScanHandler } from '~/hardware/scanner';
@@ -14,10 +17,13 @@ export function SaleScreen() {
   const { t, isTH } = useT();
   const {
     cart, query, catFilter, flash, discount,
-    addItem, incItem, decItem, clearCart,
+    addItem, incItem, decItem, clearCart, parkAndClear,
     setQuery, setCat, setDiscOpen, goPay,
   } = useSale();
   const products = useCatalog((s) => s.products);
+  const cashier = useSession((s) => s.cashier);
+  const parkedCount = useParked((s) => s.list.length);
+  const [parkedOpen, setParkedOpen] = useState(false);
 
   const filtered = useMemo(() => filterProducts(products, query, catFilter), [products, query, catFilter]);
   const showQuick = !query.trim() && catFilter === 'all';
@@ -135,13 +141,37 @@ export function SaleScreen() {
               {count === 0 ? t.noItems : t.itemsCount(count)}
             </Text>
           </View>
-          {cart.length > 0 && (
-            <Pressable onPress={clearCart} className="flex-row items-center gap-[6px] px-2 py-1">
-              <Icon name="trash" size={14} color="#a39c96" />
-              <Text className="text-ink-3 text-[11px] uppercase tracking-[0.08em]">{t.clear}</Text>
-            </Pressable>
-          )}
+          <View className="flex-row items-center gap-[4px]">
+            {cart.length > 0 && (
+              <Pressable
+                onPress={() => parkAndClear(cashier?.name ?? '—')}
+                className="flex-row items-center gap-[6px] px-2 py-1"
+              >
+                <Icon name="receipt" size={14} color="#a39c96" />
+                <Text className="text-ink-3 text-[11px] uppercase tracking-[0.08em]">{t.park}</Text>
+              </Pressable>
+            )}
+            {cart.length > 0 && (
+              <Pressable onPress={clearCart} className="flex-row items-center gap-[6px] px-2 py-1">
+                <Icon name="trash" size={14} color="#a39c96" />
+                <Text className="text-ink-3 text-[11px] uppercase tracking-[0.08em]">{t.clear}</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
+
+        {parkedCount > 0 && (
+          <Pressable
+            onPress={() => setParkedOpen(true)}
+            className="mx-[14px] mt-[10px] mb-[4px] bg-bg-soft border border-line rounded-[10px] px-3 py-[8px] flex-row items-center gap-2"
+          >
+            <Icon name="receipt" size={14} color="#68615c" />
+            <Text className="flex-1 text-ink-2 text-[12px] uppercase tracking-[0.08em]">
+              {t.parkedBadge(parkedCount)}
+            </Text>
+            <Icon name="arrowRight" size={14} color="#a39c96" />
+          </Pressable>
+        )}
 
         <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 14, paddingVertical: 6 }}>
           {cart.length === 0 ? (
@@ -259,6 +289,8 @@ export function SaleScreen() {
           </Pressable>
         </View>
       </View>
+
+      <ParkedModal visible={parkedOpen} onClose={() => setParkedOpen(false)} />
     </View>
   );
 }

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { CartLine, Discount, PayMethod, PayStep, Product } from '~/types';
+import { useParked } from './parked';
+import type { CartLine, Discount, ParkedSale, PayMethod, PayStep, Product } from '~/types';
 
 type SaleState = {
   // cart
@@ -34,6 +35,8 @@ type SaleState = {
   confirmCash: () => void;
   completeSale: (m: PayMethod) => void;
   newSale: () => void;
+  parkAndClear: (cashierName: string, note?: string) => ParkedSale | null;
+  resumeFrom: (parked: ParkedSale) => void;
 };
 
 export const useSale = create<SaleState>((set, get) => ({
@@ -98,6 +101,30 @@ export const useSale = create<SaleState>((set, get) => ({
       payStep: 'method',
       view: 'sale',
     }),
+  parkAndClear: (cashierName, note) => {
+    const { cart, discount } = get();
+    if (cart.length === 0) return null;
+    const parked = useParked.getState().park({ cart, discount, cashierName, note });
+    set({
+      cart: [],
+      query: '',
+      discount: { type: 'none', value: 0 },
+      flash: null,
+    });
+    return parked;
+  },
+  resumeFrom: (parked) => {
+    set({
+      cart: parked.cart,
+      discount: parked.discount,
+      query: '',
+      catFilter: 'all',
+      view: 'sale',
+      payStep: 'method',
+      payMethod: null,
+      cashTendered: '',
+    });
+  },
 }));
 
 // Derived helpers (not selectors; call directly from components with useSale(...))

@@ -113,6 +113,13 @@ type S = {
   ownerOnly: string;
   ownerOnlySub: string;
   ownerBadge: string;
+  parkedSales: string;
+  parkedBadge: (n: number) => string;
+  parkedEmpty: string;
+  parkedEmptyHint: string;
+  parkedResumeBlocked: string;
+  park: string;
+  resume: string;
 
   // Hardware
   hwPrinter: string;
@@ -234,6 +241,13 @@ export const STRINGS: Record<Lang, S> = {
     ownerOnly: 'Owner only',
     ownerOnlySub: 'Sign in as owner to access this screen',
     ownerBadge: 'Owner',
+    parkedSales: 'Parked sales',
+    parkedBadge: (n) => `Parked · ${n}`,
+    parkedEmpty: 'No parked sales',
+    parkedEmptyHint: 'Tap “Hold” to set the current cart aside and serve the next customer.',
+    parkedResumeBlocked: 'Finish or clear the current cart before resuming a parked sale.',
+    park: 'Hold',
+    resume: 'Resume',
 
     hwPrinter: 'Receipt printer',
     hwConnect: 'Connect',
@@ -352,6 +366,13 @@ export const STRINGS: Record<Lang, S> = {
     ownerOnly: 'เฉพาะเจ้าของร้าน',
     ownerOnlySub: 'เข้าสู่ระบบในชื่อเจ้าของร้านก่อนเปิดหน้านี้',
     ownerBadge: 'เจ้าของร้าน',
+    parkedSales: 'บิลพักไว้',
+    parkedBadge: (n) => `พักไว้ · ${n}`,
+    parkedEmpty: 'ไม่มีบิลพักไว้',
+    parkedEmptyHint: 'กด "พักบิล" เพื่อเก็บรายการปัจจุบันและรับลูกค้าคนถัดไปก่อน',
+    parkedResumeBlocked: 'ปิดหรือล้างบิลปัจจุบันก่อน แล้วค่อยเรียกบิลที่พักไว้',
+    park: 'พักบิล',
+    resume: 'เรียกคืน',
 
     hwPrinter: 'เครื่องพิมพ์ใบเสร็จ',
     hwConnect: 'เชื่อมต่อ',
