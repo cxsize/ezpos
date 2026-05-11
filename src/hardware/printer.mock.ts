@@ -4,6 +4,7 @@
 
 import { padLine } from './escpos';
 import { devBus } from './devbus';
+import { shopConfig } from '~/lib/shop';
 import type { BleDevice, PrinterApi } from './printer';
 import type { Sale } from '~/types';
 
@@ -29,12 +30,7 @@ export const printReceipt: PrinterApi['printReceipt'] = async (sale: Sale, { isT
 
   const cols = 32;
   const lines: string[] = [];
-  const shop = {
-    name: process.env.EXPO_PUBLIC_SHOP_NAME ?? 'cakethakae',
-    sub: process.env.EXPO_PUBLIC_SHOP_SUBTITLE ?? 'เค้กท่าแค',
-    addr: process.env.EXPO_PUBLIC_SHOP_ADDRESS ?? '',
-    phone: process.env.EXPO_PUBLIC_SHOP_PHONE ?? '',
-  };
+  const shop = shopConfig();
   const date = new Date(sale.createdAt);
   const dateStr = date.toLocaleDateString(isTH ? 'th-TH' : 'en-US', {
     year: 'numeric',
@@ -44,9 +40,10 @@ export const printReceipt: PrinterApi['printReceipt'] = async (sale: Sale, { isT
   const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   lines.push(shop.name.toUpperCase());
-  lines.push(shop.sub);
-  if (shop.addr) lines.push(shop.addr);
+  lines.push(shop.subtitle);
+  if (shop.address) lines.push(shop.address);
   if (shop.phone) lines.push(`Tel ${shop.phone}`);
+  if (shop.taxId) lines.push(`${isTH ? 'เลขผู้เสียภาษี' : 'Tax ID'} ${shop.taxId}`);
   lines.push('');
   lines.push(padLine(isTH ? 'ใบเสร็จ' : 'Receipt', sale.receiptNo, cols));
   lines.push(padLine(dateStr, timeStr, cols));

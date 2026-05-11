@@ -1,18 +1,43 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Icon } from '~/components/Icon';
-import { createCashier } from '~/lib/cashiers';
+import { createCashier, enrollFirstOwner, hasAnyCashier, isOwner } from '~/lib/cashiers';
+import { useSession } from '~/state/session';
 import { useT } from '~/i18n/useT';
 
 export default function Enroll() {
   const { t } = useT();
   const router = useRouter();
+  const cashier = useSession((s) => s.cashier);
+
+  // `null` = checking; `true` = first-time setup (no auth);
+  // `false` = owner adding another cashier.
+  const [firstTime, setFirstTime] = useState<boolean | null>(null);
+
   const [name, setName] = useState('');
   const [pin1, setPin1] = useState('');
   const [pin2, setPin2] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    hasAnyCashier()
+      .then((exists) => {
+        if (cancelled) return;
+        setFirstTime(!exists);
+        if (exists && !isOwner(cashier)) {
+          router.replace(cashier ? '/sale' : '/signin');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFirstTime(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cashier, router]);
 
   const canSubmit = name.trim().length > 0 && /^\d{4}$/.test(pin1) && pin1 === pin2;
 
@@ -21,14 +46,30 @@ export default function Enroll() {
     setBusy(true);
     setError(null);
     try {
-      await createCashier(name, pin1);
-      router.replace('/signin');
+      if (firstTime) {
+        await enrollFirstOwner(name, pin1);
+        router.replace('/signin');
+      } else {
+        await createCashier(name, pin1, 'cashier');
+        router.back();
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
   };
+
+  if (firstTime === null) {
+    return (
+      <View className="flex-1 bg-bg items-center justify-center">
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  const title = firstTime ? t.pinOwnerSetup : t.pinAddCashier;
+  const subtitle = firstTime ? t.pinOwnerSetupSub : t.pinAddCashierSub;
 
   return (
     <View className="flex-1 bg-bg items-center justify-center px-8">
@@ -38,9 +79,14 @@ export default function Enroll() {
             style={{ fontFamily: 'BodoniModa' }}
             className="text-[28px] text-ink"
           >
-            {t.pinAddCashier}
+            {title}
           </Text>
-          <Text className="text-ink-2 text-[13px] mt-1">{t.pinOwnerSetupSub}</Text>
+          <Text className="text-ink-2 text-[13px] mt-1">{subtitle}</Text>
+          {!firstTime && cashier && (
+            <Text className="text-ink-3 text-[11px] uppercase tracking-[0.12em] mt-2">
+              {t.signedInAs} · {cashier.name}
+            </Text>
+          )}
         </View>
 
         <View className="gap-2">

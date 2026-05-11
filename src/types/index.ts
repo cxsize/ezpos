@@ -34,12 +34,22 @@ export type Coupon = {
 export type PayMethod = 'cash' | 'qr';
 export type PayStep = 'method' | 'cash' | 'qr' | 'drawer' | 'done';
 
+export type CashierRole = 'owner' | 'cashier';
+
 export type Cashier = {
   id: string;
   name: string;
   pinHash: string;
+  role: CashierRole;
   active: boolean;
   createdAt: number;
+};
+
+export type VoidInfo = {
+  voidedAt: number;
+  voidedBy: string;
+  voidedByName: string;
+  reason?: string;
 };
 
 export type Sale = {
@@ -57,4 +67,15 @@ export type Sale = {
   cashTendered?: number;
   change?: number;
   createdAt: number;
+  voided?: VoidInfo;
+};
+
+/** A cart kept aside ("parked") so the cashier can serve the next customer first. */
+export type ParkedSale = {
+  id: string;
+  cart: CartLine[];
+  discount: Discount;
+  createdAt: number;
+  cashierName: string;
+  note?: string;
 };

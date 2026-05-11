@@ -98,6 +98,7 @@ type S = {
   pinSub: string;
   pinBadge: string;
   pinAddCashier: string;
+  pinAddCashierSub: string;
   pinCashierName: string;
   pinSetPin: string;
   pinConfirmPin: string;
@@ -108,6 +109,10 @@ type S = {
   pinOwnerSetupSub: string;
   pinSignIn: string;
   pinContinue: string;
+  signedInAs: string;
+  ownerOnly: string;
+  ownerOnlySub: string;
+  ownerBadge: string;
 
   // Hardware
   hwPrinter: string;
@@ -214,6 +219,7 @@ export const STRINGS: Record<Lang, S> = {
     pinSub: 'Enter your 4-digit PIN',
     pinBadge: 'Cashier',
     pinAddCashier: 'Add cashier',
+    pinAddCashierSub: 'Create a new staff account',
     pinCashierName: 'Cashier name',
     pinSetPin: 'Set PIN',
     pinConfirmPin: 'Confirm PIN',
@@ -221,9 +227,13 @@ export const STRINGS: Record<Lang, S> = {
     pinWrong: 'Wrong PIN',
     pinSignOut: 'Sign out',
     pinOwnerSetup: 'First-time setup',
-    pinOwnerSetupSub: 'Create the first cashier account',
+    pinOwnerSetupSub: 'Create the owner account',
     pinSignIn: 'Sign in',
     pinContinue: 'Continue',
+    signedInAs: 'Signed in as',
+    ownerOnly: 'Owner only',
+    ownerOnlySub: 'Sign in as owner to access this screen',
+    ownerBadge: 'Owner',
 
     hwPrinter: 'Receipt printer',
     hwConnect: 'Connect',
@@ -327,6 +337,7 @@ export const STRINGS: Record<Lang, S> = {
     pinSub: 'กรอกรหัส PIN 4 หลัก',
     pinBadge: 'พนักงาน',
     pinAddCashier: 'เพิ่มพนักงาน',
+    pinAddCashierSub: 'สร้างบัญชีพนักงานใหม่',
     pinCashierName: 'ชื่อพนักงาน',
     pinSetPin: 'ตั้งรหัส PIN',
     pinConfirmPin: 'ยืนยันรหัส PIN',
@@ -334,9 +345,13 @@ export const STRINGS: Record<Lang, S> = {
     pinWrong: 'รหัส PIN ไม่ถูกต้อง',
     pinSignOut: 'ออกจากระบบ',
     pinOwnerSetup: 'ตั้งค่าครั้งแรก',
-    pinOwnerSetupSub: 'สร้างบัญชีพนักงานคนแรก',
+    pinOwnerSetupSub: 'สร้างบัญชีเจ้าของร้าน',
     pinSignIn: 'เข้าสู่ระบบ',
     pinContinue: 'ต่อไป',
+    signedInAs: 'เข้าใช้งานในชื่อ',
+    ownerOnly: 'เฉพาะเจ้าของร้าน',
+    ownerOnlySub: 'เข้าสู่ระบบในชื่อเจ้าของร้านก่อนเปิดหน้านี้',
+    ownerBadge: 'เจ้าของร้าน',
 
     hwPrinter: 'เครื่องพิมพ์ใบเสร็จ',
     hwConnect: 'เชื่อมต่อ',

@@ -10,6 +10,7 @@ import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
 import { EscPos, padLine } from './escpos';
 import { useSettings } from '~/state/settings';
+import { shopConfig } from '~/lib/shop';
 import type { Sale } from '~/types';
 
 const CHUNK = 180;
@@ -93,12 +94,7 @@ export async function kickDrawer(): Promise<void> {
 
 export async function printReceipt(sale: Sale, opts: { isTH: boolean }): Promise<void> {
   const cols = 32;
-  const shop = {
-    name: process.env.EXPO_PUBLIC_SHOP_NAME ?? 'cakethakae',
-    sub: process.env.EXPO_PUBLIC_SHOP_SUBTITLE ?? 'เค้กท่าแค',
-    addr: process.env.EXPO_PUBLIC_SHOP_ADDRESS ?? '',
-    phone: process.env.EXPO_PUBLIC_SHOP_PHONE ?? '',
-  };
+  const shop = shopConfig();
 
   const date = new Date(sale.createdAt);
   const dateStr = date.toLocaleDateString(opts.isTH ? 'th-TH' : 'en-US', {
@@ -111,9 +107,10 @@ export async function printReceipt(sale: Sale, opts: { isTH: boolean }): Promise
   const p = new EscPos().init();
 
   p.align(1).size(2, 2).text(shop.name).newline();
-  p.size(1, 1).text(shop.sub).newline();
-  if (shop.addr) p.text(shop.addr).newline();
+  p.size(1, 1).text(shop.subtitle).newline();
+  if (shop.address) p.text(shop.address).newline();
   if (shop.phone) p.text(`Tel ${shop.phone}`).newline();
+  if (shop.taxId) p.text(`${opts.isTH ? 'เลขผู้เสียภาษี' : 'Tax ID'} ${shop.taxId}`).newline();
 
   p.align(0).newline();
   p.text(padLine(opts.isTH ? 'ใบเสร็จ' : 'Receipt', sale.receiptNo, cols)).newline();
