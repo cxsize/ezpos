@@ -6,12 +6,15 @@ import { useSettings, ACCENTS, type AccentKey } from '~/state/settings';
 import { useSession } from '~/state/session';
 import { useT } from '~/i18n/useT';
 import { scanPrinters, type BleDevice } from '~/hardware/printer';
+import { isOwner } from '~/lib/cashiers';
 
 export default function Settings() {
   const router = useRouter();
   const { t } = useT();
   const { lang, accent, printerId, setLang, setAccent, setPrinterId } = useSettings();
+  const cashier = useSession((s) => s.cashier);
   const signOut = useSession((s) => s.signOut);
+  const owner = isOwner(cashier);
   const [scanning, setScanning] = useState(false);
   const [devices, setDevices] = useState<BleDevice[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +116,33 @@ export default function Settings() {
           </View>
         </Section>
 
+        <Section title={t.history}>
+          <View className="gap-2">
+            <NavRow
+              icon="receipt"
+              label={t.history}
+              sub={t.historySub}
+              onPress={() => router.push('/history')}
+            />
+            {owner && (
+              <NavRow
+                icon="calc"
+                label={t.reportTitle}
+                sub={t.reportSubGross}
+                onPress={() => router.push('/report')}
+              />
+            )}
+            {owner && (
+              <NavRow
+                icon="user"
+                label={t.pinAddCashier}
+                sub={t.pinAddCashierSub}
+                onPress={() => router.push('/admin/cashiers')}
+              />
+            )}
+          </View>
+        </Section>
+
         <Pressable
           onPress={() => {
             signOut();
@@ -124,6 +154,34 @@ export default function Settings() {
         </Pressable>
       </ScrollView>
     </View>
+  );
+}
+
+function NavRow({
+  icon,
+  label,
+  sub,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Icon>['name'];
+  label: string;
+  sub: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className="bg-panel border border-line rounded-[12px] p-3 flex-row items-center gap-3"
+    >
+      <View className="w-9 h-9 rounded-full bg-bg-soft items-center justify-center">
+        <Icon name={icon} size={16} color="#68615c" />
+      </View>
+      <View className="flex-1">
+        <Text className="text-ink text-[14px]">{label}</Text>
+        <Text className="text-ink-3 text-[11.5px]">{sub}</Text>
+      </View>
+      <Icon name="arrowRight" size={16} color="#a39c96" />
+    </Pressable>
   );
 }
 

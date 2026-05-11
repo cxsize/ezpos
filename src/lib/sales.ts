@@ -1,9 +1,20 @@
-import { collection, doc, setDoc } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from './firebase';
-import type { Sale } from '~/types';
+import type { Sale, VoidInfo } from '~/types';
 
 const QUEUE_KEY = '@sales/pending';
+const SALES_LIMIT = 250;
 
 async function readQueue(): Promise<Sale[]> {
   try {
@@ -50,4 +61,38 @@ export async function flushSaleQueue(): Promise<number> {
   }
   await writeQueue(remaining);
   return flushed;
+}
+
+/** Subscribe to the most recent sales (last 250, newest first). */
+export function subscribeRecentSales(cb: (sales: Sale[]) => void): () => void {
+  const q = query(collection(db(), 'sales'), orderBy('createdAt', 'desc'), limit(SALES_LIMIT));
+  return onSnapshot(q, (snap) => {
+    const items: Sale[] = [];
+    snap.forEach((d) => items.push(d.data() as Sale));
+    cb(items);
+  });
+}
+
+export async function getSale(id: string): Promise<Sale | null> {
+  const snap = await getDoc(doc(db(), 'sales', id));
+  return snap.exists() ? (snap.data() as Sale) : null;
+}
+
+/**
+ * Mark a sale as voided. Firestore rules permit only fields outside the
+ * financial set to change, so we only write the `voided` map.
+ */
+export async function voidSale(
+  saleId: string,
+  voidedBy: string,
+  voidedByName: string,
+  reason?: string,
+): Promise<void> {
+  const voided: VoidInfo = {
+    voidedAt: Date.now(),
+    voidedBy,
+    voidedByName,
+    ...(reason ? { reason } : {}),
+  };
+  await updateDoc(doc(db(), 'sales', saleId), { voided });
 }

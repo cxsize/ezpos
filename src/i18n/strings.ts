@@ -121,6 +121,45 @@ type S = {
   park: string;
   resume: string;
 
+  // History + Z-report
+  history: string;
+  historySub: string;
+  filterToday: string;
+  filterWeek: string;
+  filterAll: string;
+  noSales: string;
+  voidBadge: string;
+  voidSale: string;
+  voidConfirmTitle: string;
+  voidConfirmSub: string;
+  voidReason: string;
+  voidReasonPlaceholder: string;
+  reprint: string;
+  reprintFailed: string;
+  reportTitle: string;
+  reportSubGross: string;
+  reportSubCount: string;
+  reportSubAvg: string;
+  reportSubCash: string;
+  reportSubQr: string;
+  reportSubVoided: string;
+  reportTopItems: string;
+  reportDate: string;
+  prevDay: string;
+  nextDay: string;
+
+  // Admin
+  adminCashiersTitle: string;
+  adminCashiersSub: string;
+  adminAddNew: string;
+  adminResetPin: string;
+  adminDeactivate: string;
+  adminConfirmDeactivate: string;
+  adminCannotDeactivateSelf: string;
+  adminCannotDeactivateLastOwner: string;
+  adminNewPin: string;
+  adminPinUpdated: string;
+
   // Hardware
   hwPrinter: string;
   hwConnect: string;
@@ -249,6 +288,43 @@ export const STRINGS: Record<Lang, S> = {
     park: 'Hold',
     resume: 'Resume',
 
+    history: 'Sales history',
+    historySub: 'Recent receipts · reprint or void',
+    filterToday: 'Today',
+    filterWeek: '7 days',
+    filterAll: 'All',
+    noSales: 'No sales yet',
+    voidBadge: 'Voided',
+    voidSale: 'Void',
+    voidConfirmTitle: 'Void this sale?',
+    voidConfirmSub: 'The receipt stays on record but its total stops counting in reports.',
+    voidReason: 'Reason (optional)',
+    voidReasonPlaceholder: 'e.g. wrong items',
+    reprint: 'Reprint',
+    reprintFailed: 'Reprint failed',
+    reportTitle: 'Daily report',
+    reportSubGross: 'Gross sales',
+    reportSubCount: 'Receipts',
+    reportSubAvg: 'Average ticket',
+    reportSubCash: 'Cash',
+    reportSubQr: 'PromptPay',
+    reportSubVoided: 'Voided',
+    reportTopItems: 'Top items',
+    reportDate: 'Date',
+    prevDay: 'Previous day',
+    nextDay: 'Next day',
+
+    adminCashiersTitle: 'Manage cashiers',
+    adminCashiersSub: 'Add staff, reset PINs, deactivate accounts',
+    adminAddNew: 'Add new cashier',
+    adminResetPin: 'Reset PIN',
+    adminDeactivate: 'Deactivate',
+    adminConfirmDeactivate: 'Deactivate this cashier? They will no longer be able to sign in.',
+    adminCannotDeactivateSelf: 'You can\'t deactivate your own account.',
+    adminCannotDeactivateLastOwner: 'At least one owner must remain.',
+    adminNewPin: 'New 4-digit PIN',
+    adminPinUpdated: 'PIN updated',
+
     hwPrinter: 'Receipt printer',
     hwConnect: 'Connect',
     hwConnected: 'Connected',
@@ -373,6 +449,43 @@ export const STRINGS: Record<Lang, S> = {
     parkedResumeBlocked: 'ปิดหรือล้างบิลปัจจุบันก่อน แล้วค่อยเรียกบิลที่พักไว้',
     park: 'พักบิล',
     resume: 'เรียกคืน',
+
+    history: 'ประวัติการขาย',
+    historySub: 'ใบเสร็จย้อนหลัง · พิมพ์ซ้ำ/ยกเลิก',
+    filterToday: 'วันนี้',
+    filterWeek: '7 วัน',
+    filterAll: 'ทั้งหมด',
+    noSales: 'ยังไม่มีรายการขาย',
+    voidBadge: 'ยกเลิกแล้ว',
+    voidSale: 'ยกเลิกบิล',
+    voidConfirmTitle: 'ยกเลิกบิลนี้?',
+    voidConfirmSub: 'ใบเสร็จยังอยู่ในระบบ แต่ยอดจะไม่นับในรายงาน',
+    voidReason: 'เหตุผล (ไม่บังคับ)',
+    voidReasonPlaceholder: 'เช่น คิดเงินผิดสินค้า',
+    reprint: 'พิมพ์ซ้ำ',
+    reprintFailed: 'พิมพ์ซ้ำไม่สำเร็จ',
+    reportTitle: 'รายงานประจำวัน',
+    reportSubGross: 'ยอดขายรวม',
+    reportSubCount: 'จำนวนใบเสร็จ',
+    reportSubAvg: 'เฉลี่ยต่อบิล',
+    reportSubCash: 'เงินสด',
+    reportSubQr: 'พร้อมเพย์',
+    reportSubVoided: 'ยกเลิก',
+    reportTopItems: 'สินค้าขายดี',
+    reportDate: 'วันที่',
+    prevDay: 'วันก่อนหน้า',
+    nextDay: 'วันถัดไป',
+
+    adminCashiersTitle: 'จัดการพนักงาน',
+    adminCashiersSub: 'เพิ่มพนักงาน เปลี่ยน PIN ปิดบัญชี',
+    adminAddNew: 'เพิ่มพนักงานใหม่',
+    adminResetPin: 'เปลี่ยน PIN',
+    adminDeactivate: 'ปิดบัญชี',
+    adminConfirmDeactivate: 'ปิดบัญชีพนักงานนี้? จะเข้าใช้งานต่อไม่ได้',
+    adminCannotDeactivateSelf: 'ปิดบัญชีตัวเองไม่ได้',
+    adminCannotDeactivateLastOwner: 'ต้องมีเจ้าของร้านอย่างน้อย 1 คน',
+    adminNewPin: 'PIN ใหม่ 4 หลัก',
+    adminPinUpdated: 'อัปเดต PIN แล้ว',
 
     hwPrinter: 'เครื่องพิมพ์ใบเสร็จ',
     hwConnect: 'เชื่อมต่อ',
