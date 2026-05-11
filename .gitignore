@@ -8,3 +8,6 @@ android/
 .DS_Store
 .env
 .env.local
+
+# Test artifacts
+/coverage

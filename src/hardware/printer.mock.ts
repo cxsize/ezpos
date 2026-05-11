@@ -8,7 +8,6 @@ import { shopConfig } from '~/lib/shop';
 import type { BleDevice, PrinterApi } from './printer';
 import type { Sale } from '~/types';
 
-let connected: BleDevice | null = null;
 let failNext = false;
 
 const MOCK_DEVICES: BleDevice[] = [
@@ -84,7 +83,7 @@ export const printReceipt: PrinterApi['printReceipt'] = async (sale: Sale, { isT
 };
 
 export const disconnectPrinter: PrinterApi['disconnectPrinter'] = async () => {
-  connected = null;
+  // Mock printer is connectionless — nothing to tear down.
 };
 
 export const printerPermissionsRequired: PrinterApi['printerPermissionsRequired'] = () => [];
