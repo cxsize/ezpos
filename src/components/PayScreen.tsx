@@ -9,6 +9,9 @@ import { useSettings } from '~/state/settings';
 import { fmtTHB, fmtTHB2 } from '~/lib/money';
 import { saveSale } from '~/lib/sales';
 import { printReceipt, kickDrawer } from '~/hardware/printer';
+import { PromptPayQR } from './PromptPayQR';
+import { isValidPromptPayId } from '~/lib/promptpay';
+import { shopConfig } from '~/lib/shop';
 import type { PayMethod, Sale } from '~/types';
 
 export function PayScreen() {
@@ -250,6 +253,8 @@ function Keypad({ onPress }: { onPress: (k: string) => void }) {
 
 function QRPay({ total, onPaid }: { total: number; onPaid: () => void }) {
   const { t } = useT();
+  const { promptpayId } = shopConfig();
+  const realQR = isValidPromptPayId(promptpayId);
   const [status, setStatus] = useState<'waiting' | 'paid'>('waiting');
   useEffect(() => {
     if (status === 'paid') {
@@ -277,7 +282,11 @@ function QRPay({ total, onPaid }: { total: number; onPaid: () => void }) {
           }}
         >
           {status === 'waiting' ? (
-            <QRGraphic />
+            realQR ? (
+              <PromptPayQR amount={total} size={240} />
+            ) : (
+              <QRGraphic />
+            )
           ) : (
             <View className="items-center gap-[10px]">
               <Icon name="check" size={96} stroke={2.5} color="#fff" />
@@ -288,6 +297,11 @@ function QRPay({ total, onPaid }: { total: number; onPaid: () => void }) {
         <Text className="text-ink-3 text-[13.5px] text-center">
           {status === 'waiting' ? t.askCustomer : t.thankYou}
         </Text>
+        {!realQR && status === 'waiting' && (
+          <Text className="text-ink-3 text-[10.5px] uppercase tracking-[0.1em]">
+            Demo QR · set EXPO_PUBLIC_PROMPTPAY_ID
+          </Text>
+        )}
       </View>
       <Pressable
         onPress={() => setStatus('paid')}

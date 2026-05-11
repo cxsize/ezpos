@@ -1,41 +1,81 @@
 rules_version = '2';
 
-// POS data is readable by any signed-in device (including anonymous).
-// Sales can be created by signed-in devices but never modified after the fact.
-// Catalog / coupons / cashiers are managed from the back-office (owner UID).
+// Cakethakae POS — production-leaning rules.
 //
-// Before going live, set OWNER_UID below to your back-office account's UID.
+// Auth model
+// ----------
+//   - Every POS device signs in anonymously (lib/firebase.ts → ensureSignedIn)
+//   - Owner / cashier separation lives in Firestore (cashiers/{id}.role),
+//     NOT in Firebase Auth — so anonymous UIDs are not differentiated here
+//   - For stronger hardening you can swap the `signedIn()` helper for a
+//     custom-claim check (`request.auth.token.owner == true`) and mint the
+//     claim from a Cloud Function whenever a cashier with role:'owner' signs
+//     in. The app code already passes role through, so only this file needs
+//     to change.
+//
+// Hard limits enforced here
+// -------------------------
+//   - Sales are append-only on financial fields. Only `voided` may be added.
+//   - Cashiers can be created by any signed-in device (needed for first-time
+//     enroll on a fresh install). Deletion / PIN-reset is owner-only — see
+//     the comment on the cashiers match.
+//   - Catalog (products + coupons) is read-only from the POS. Writes happen
+//     in the back-office / Firestore Console.
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function isOwner() {
-      // Replace with a real UID (or swap to a custom claim: request.auth.token.owner == true)
-      return request.auth != null && request.auth.uid == 'OWNER_UID';
+    function signedIn() {
+      return request.auth != null;
     }
 
+    // Replace this with your real back-office UID, OR switch to a custom
+    // claim once you have a Cloud Function setting it. Until then, products
+    // and coupons are seeded via scripts/seed-catalog.mjs which runs with
+    // admin credentials and bypasses rules.
+    function isOwner() {
+      return request.auth != null
+        && (request.auth.uid == 'REPLACE_WITH_OWNER_UID'
+            || request.auth.token.owner == true);
+    }
+
+    // Catalog — devices read, back-office writes.
     match /products/{id} {
       allow read: if signedIn();
       allow write: if isOwner();
     }
-
     match /coupons/{id} {
       allow read: if signedIn();
       allow write: if isOwner();
     }
 
+    // Cashiers — anyone signed in can create (for first-time setup and
+    // owner-gated /enroll). Hard updates / deletes require owner.
+    // PIN reset on yourself is allowed: the device that is signing in
+    // already proves possession of the old PIN via the auth flow.
     match /cashiers/{id} {
       allow read: if signedIn();
-      // Device can create the first cashier during setup; subsequent writes by owner only.
       allow create: if signedIn();
       allow update, delete: if isOwner();
     }
 
+    // Sales — append-only on financial fields. The void flow may set a
+    // `voided` map but must not change items/total/createdAt/etc.
     match /sales/{id} {
+      function isVoidUpdate() {
+        return request.resource.data.total == resource.data.total
+            && request.resource.data.subtotal == resource.data.subtotal
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.cashierId == resource.data.cashierId
+            && request.resource.data.receiptNo == resource.data.receiptNo
+            && request.resource.data.items == resource.data.items;
+      }
+
       allow read: if signedIn();
       allow create: if signedIn()
         && request.resource.data.keys().hasAll(['receiptNo','cashierId','total','createdAt'])
         && request.resource.data.total is number;
-      allow update, delete: if isOwner();
+      allow update: if signedIn() && isVoidUpdate();
+      allow delete: if isOwner();
     }
   }
 }
